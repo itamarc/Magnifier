@@ -70,20 +70,21 @@
     </LinearLayout>
 
     <SeekBar
-        android:id="@+id/seekBar"
+        android:id="@+id/cameraZoomBar"
         android:layout_width="match_parent"
         android:layout_height="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/linearButtonsBar"/>
 
-    <TextureView
-        android:id="@+id/textureView"
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraView"
         android:layout_width="match_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="match_parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/seekBar"/>
-
+        app:layout_constraintBottom_toTopOf="@id/cameraZoomBar"
+        android:translationZ="-1dp"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>
