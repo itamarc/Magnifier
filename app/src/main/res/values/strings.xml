@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Magnifier</string>
+    <string name="save">Save</string>
+    <string name="exit">Exit</string>
+    <string name="about_the_app">About the app</string>
+    <string name="flashlight_on_off">Flashlight on/off</string>
+    <string name="freeze_image">Freeze image</string>
+</resources>
