@@ -11,15 +11,20 @@ android {
         minSdk 28
         targetSdk 34
         versionCode 1
-        versionName "0.3alpha"
+        versionName "0.4alpha"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "APP_VERSION", "${defaultConfig.versionName}"
         }
     }
     compileOptions {

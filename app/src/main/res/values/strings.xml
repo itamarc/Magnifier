@@ -1,8 +1,12 @@
 <resources>
     <string name="app_name">Magnifier</string>
+    <string name="app_name_with_version">Magnifier %s</string>
     <string name="save">Save</string>
     <string name="exit">Exit</string>
     <string name="about_the_app">About the app</string>
     <string name="flashlight_on_off">Flashlight on/off</string>
     <string name="freeze_image">Freeze image</string>
+    <string name="close_the_dialog">Close the dialog</string>
+    <string name="magnifier_app_icon">Magnifier app icon</string>
+    <string name="magnifier_about_text">Magnifier is a simple open source app to let you use your phone camera as a magnifying glass.\n\n Created by Itamar Carvalho in february 2024.\n\n You can visit the sources repository in GitHub at this address:\n https://github.com/itamarc/Magnifier</string>
 </resources>

@@ -1,5 +1,14 @@
 package io.github.itamarc.magnifier;
 
+import android.Manifest;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.SeekBar;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
@@ -14,11 +23,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.lifecycle.LiveData;
-
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.SeekBar;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -39,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
         checkPermissions();
 
-        // Camera setup
+        // Camera and interface setup
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
             try {
@@ -59,28 +63,36 @@ public class MainActivity extends AppCompatActivity {
         CameraInfo cameraInfo = camera.getCameraInfo();
         CameraControl cameraControl = camera.getCameraControl();
 
+        // TODO implement save button
+
+        // Freeze image button
         FloatingActionButton fabFreeze = findViewById(R.id.btnFreeze);
         fabFreeze.setOnClickListener(v -> {
             if (imageFrozen) {
                 fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_open_24, getTheme()));
+                fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.white_70, getTheme())));
                 // TODO unfreeze image
                 imageFrozen = false;
             } else {
                 fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_24, getTheme()));
+                fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.yellow_70, getTheme())));
                 // TODO freeze image
                 imageFrozen = true;
             }
         });
 
+        // Flashlight on/off button
         FloatingActionButton fabFlashlight = findViewById(R.id.btnFlashlight);
         if (cameraInfo.hasFlashUnit()) {
             fabFlashlight.setOnClickListener(v -> {
-                if (flashlightOn) {
+                if (flashlightOn) { // If already on, turn it off
                     fabFlashlight.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_flashlight_off_24, getTheme()));
+                    fabFlashlight.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.white_70, getTheme())));
                     flashlightOn = false;
                     cameraControl.enableTorch(false);
-                } else {
+                } else { // If it's off, turn on
                     fabFlashlight.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_flashlight_on_24, getTheme()));
+                    fabFlashlight.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.yellow_70, getTheme())));
                     flashlightOn = true;
                     cameraControl.enableTorch(true);
                 }
@@ -89,9 +101,23 @@ public class MainActivity extends AppCompatActivity {
             fabFlashlight.setVisibility(View.GONE);
         }
 
+        // About button
+        String versionString = getString(R.string.app_name_with_version, BuildConfig.VERSION_NAME);
+        FloatingActionButton fabAbout = findViewById(R.id.btnAbout);
+        Context context = this;
+        fabAbout.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setView(R.layout.about_dialog);
+            builder.setTitle(versionString);
+            builder.setPositiveButton("Close", (dialog, which) -> dialog.dismiss());
+            builder.show();
+        });
+
+        // Exit button
         FloatingActionButton fabExit = findViewById(R.id.btnExit);
         fabExit.setOnClickListener(v -> System.exit(0));
 
+        // Zoom bar
         SeekBar camZoomBar = findViewById(R.id.cameraZoomBar);
         camZoomBar.setMin(1);
         LiveData<ZoomState> zoomState = cameraInfo.getZoomState();
@@ -112,8 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkPermissions() {
         int CAMERA_STORAGE_PERMISSION_REQUEST_CODE = 1;
-//        String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-        String[] permissions = {"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE"};
+        String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
         boolean allGranted = true;
         for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
