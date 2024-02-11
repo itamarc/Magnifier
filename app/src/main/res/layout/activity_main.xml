@@ -71,20 +71,37 @@
 
     <SeekBar
         android:id="@+id/cameraZoomBar"
+        android:contentDescription="@string/control_the_zoom_level"
         android:layout_width="match_parent"
         android:layout_height="30dp"
         app:layout_constraintBottom_toTopOf="@id/linearButtonsBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/cameraView"
+    <ImageView
+        android:id="@+id/frozenView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@string/view_an_image"
+        android:scaleType="centerCrop"
         android:translationZ="-1dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/cameraZoomBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraView"
+        android:contentDescription="@string/view_of_the_camera_live_stream"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:translationZ="-2dp"
         app:layout_constraintBottom_toTopOf="@id/cameraZoomBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
