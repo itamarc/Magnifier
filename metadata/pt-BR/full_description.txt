@@ -1,0 +1,6 @@
+Magnifier é um aplicativo de código aberto simples que permite usar a câmera do telefone como lupa.
+
+Além de alterar facilmente o nível de zoom da câmera, é possível:
+- ligar e desligar a luz do flash,
+- congelar a imagem na tela e
+- salvar o que está sendo mostrado.
