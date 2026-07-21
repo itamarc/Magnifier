@@ -4,21 +4,19 @@
 
     <uses-feature android:name="android.hardware.camera.any" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
     <application
         android:allowBackup="false"
         android:icon="@mipmap/magnifier_icon"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/magnifier_icon_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Magnifier"
-        tools:targetApi="31">
+        android:theme="@style/Theme.Magnifier">
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:exported="true"
-            android:theme="@style/Theme.Magnifier">
+            android:theme="@style/Theme.Magnifier"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

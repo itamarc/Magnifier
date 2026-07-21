@@ -2,16 +2,18 @@ package io.github.itamarc.magnifier;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -23,7 +25,6 @@ import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.core.ZoomState;
@@ -37,9 +38,8 @@ import androidx.lifecycle.LiveData;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -80,18 +80,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkPermissions() {
-        int CAMERA_STORAGE_PERMISSION_REQUEST_CODE = 1;
-        String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-        boolean allGranted = true;
-        for (String permission : permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                allGranted = false;
-                break;
-            }
-        }
-
-        if (!allGranted) {
-            ActivityCompat.requestPermissions(this, permissions, CAMERA_STORAGE_PERMISSION_REQUEST_CODE);
+        int CAMERA_PERMISSION_REQUEST_CODE = 1;
+        String[] permissions = {Manifest.permission.CAMERA};
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, permissions, CAMERA_PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -131,23 +123,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Freeze image button
         fabFreeze.setOnClickListener(v -> {
-            if (frozenImage != null) { // There is already a image frozen in the screen
-                fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_open_24, getTheme()));
-                fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.amber_200, getTheme())));
-                ImageView frozenView = findViewById(R.id.frozenView);
-                frozenView.setVisibility(View.GONE);
-                frozenImage.close();
-                frozenImage = null;
-                if (flashlightOn && cameraInfo.hasFlashUnit()) {
-                    cameraControl.enableTorch(true);
-                }
+            if (frozenImage != null) { // There is already an image frozen in the screen
+                unfreeze();
             } else { // Let's capture and freeze an image
-                fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_24, getTheme()));
-                fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.amber_700, getTheme())));
-                captureImageAndFreeze();
-                if (flashlightOn && cameraInfo.hasFlashUnit()) {
-                    mainHandler.postDelayed(() -> cameraControl.enableTorch(false), 1000);
-                }
+                freeze(null);
             }
         });
 
@@ -202,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void captureImageAndFreeze() {
+    private void captureImageAndFreeze(Runnable onComplete) {
         imageCapture.takePicture(Executors.newSingleThreadExecutor(),
                 new ImageCapture.OnImageCapturedCallback() {
             @Override
@@ -222,88 +201,119 @@ public class MainActivity extends AppCompatActivity {
                     }
                     frozenView.setImageBitmap(bitmap);
                     frozenView.setVisibility(View.VISIBLE);
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
                 });
             }
         });
     }
 
-    private void captureImageAndSave() {
-        File file;
-        try {
-            file = getFileToSave();
-        } catch (IOException e) {
-            mainHandler.post(() -> showAlert(
-                    getString(R.string.error),
-                    getString(R.string.error_saving, e.getLocalizedMessage()),
-                    getString(R.string.close)));
-            return;
-        }
-        ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(file).build();
-        imageCapture.takePicture(outputFileOptions,
-                Executors.newSingleThreadExecutor(),
-                new ImageCapture.OnImageSavedCallback() {
-            @Override
-            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                String savedPath = Objects.requireNonNull(outputFileResults.getSavedUri()).getPath();
-                mainHandler.post(() -> showAlert(
-                        getString(R.string.info),
-                        "File saved in '" + savedPath + "'.",
-                        getString(R.string.close)));
-            }
+    private void freeze(Runnable onComplete) {
+        CameraInfo cameraInfo = camera.getCameraInfo();
+        CameraControl cameraControl = camera.getCameraControl();
+        FloatingActionButton fabFreeze = findViewById(R.id.btnFreeze);
 
-            @Override
-            public void onError(@NonNull ImageCaptureException exception) {
-                mainHandler.post(() -> showAlert(
-                        getString(R.string.error),
-                        getString(R.string.error_saving, exception.getLocalizedMessage()),
-                        getString(R.string.close)));
-            }
-        });
+        fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_24, getTheme()));
+        fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.amber_700, getTheme())));
+        captureImageAndFreeze(onComplete);
+        if (flashlightOn && cameraInfo.hasFlashUnit()) {
+            mainHandler.postDelayed(() -> cameraControl.enableTorch(false), 1000);
+        }
+    }
+
+    private void unfreeze() {
+        CameraInfo cameraInfo = camera.getCameraInfo();
+        CameraControl cameraControl = camera.getCameraControl();
+        FloatingActionButton fabFreeze = findViewById(R.id.btnFreeze);
+
+        fabFreeze.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.baseline_lock_open_24, getTheme()));
+        fabFreeze.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.amber_200, getTheme())));
+        ImageView frozenView = findViewById(R.id.frozenView);
+        frozenView.setVisibility(View.GONE);
+        if (frozenImage != null) {
+            frozenImage.close();
+            frozenImage = null;
+        }
+        if (flashlightOn && cameraInfo.hasFlashUnit()) {
+            cameraControl.enableTorch(true);
+        }
+    }
+
+    private void captureImageAndSave() {
+        freeze(() -> saveImage(this::unfreeze));
     }
 
     private void saveImage() {
+        saveImage(null);
+    }
+
+    private void saveImage(Runnable onDismiss) {
         ImageView frozenView = findViewById(R.id.frozenView);
-        Bitmap bitmap = ((BitmapDrawable)frozenView.getDrawable()).getBitmap();
-        try {
-            File file = getFileToSave();
-            FileOutputStream outputStream = new FileOutputStream(file);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream);
-            outputStream.close();
-            mainHandler.post(() -> showAlert(
-                    getString(R.string.info),
-                    "File saved in '" + file.getAbsolutePath() + "'.",
-                    getString(R.string.close)));
-        } catch (IOException e) {
+        Bitmap bitmap = ((BitmapDrawable) frozenView.getDrawable()).getBitmap();
+
+        String fileName = getNewImageName();
+
+        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, getContentValues(fileName));
+
+        if (uri != null) {
+            try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
+                if (outputStream != null) {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream);
+                    showSaveSuccess(fileName, onDismiss);
+                } else {
+                    throw new IOException("Failed to open output stream.");
+                }
+            } catch (IOException e) {
+                showSaveError(e.getLocalizedMessage(), onDismiss);
+            }
+        } else {
             mainHandler.post(() -> showAlert(
                     getString(R.string.error),
-                    getString(R.string.error_saving, e.getLocalizedMessage()),
-                    getString(R.string.close)));
+                    "Failed to create MediaStore entry.",
+                    getString(R.string.close),
+                    onDismiss));
         }
     }
 
-    private File getFileToSave() throws IOException {
-        // Get base folder path
-        String baseFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getPath();
-
-        // Check and create "Magnifier" subfolder
-        File subfolder = new File(baseFolder, "Magnifier");
-        if (!subfolder.exists()) {
-            if (!subfolder.mkdir()) {
-                throw new IOException("Failed to create Magnifier folder under DCIM.");
-            }
-        }
-
-        String fileName = "Magnifier_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".jpg";
-
-        // Build complete file path
-        return new File(subfolder, fileName);
+    private String getNewImageName() {
+        return "Magnifier_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
     }
 
-    private void showAlert(String title, String message, String buttonText) {
+    private ContentValues getContentValues(String fileName) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/Magnifier");
+        return contentValues;
+    }
+
+    private void showSaveSuccess(String fileName, Runnable onDismiss) {
+        mainHandler.post(() -> showAlert(
+                getString(R.string.info),
+                "File saved to Gallery under 'Magnifier' folder with name '" + fileName + "'.",
+                getString(R.string.close),
+                onDismiss));
+    }
+
+    private void showSaveError(String error, Runnable onDismiss) {
+        mainHandler.post(() -> showAlert(
+                getString(R.string.error),
+                getString(R.string.error_saving, error),
+                getString(R.string.close),
+                onDismiss));
+    }
+
+    private void showAlert(String title, String message, String buttonText, Runnable onDismiss) {
         AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
         alertDialog.setTitle(title);
         alertDialog.setMessage(message);
-        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, buttonText, (dialog, which) -> dialog.dismiss());
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, buttonText, (dialog, which) -> {
+            dialog.dismiss();
+            if (onDismiss != null) {
+                onDismiss.run();
+            }
+        });
         alertDialog.show();
     }
 }
